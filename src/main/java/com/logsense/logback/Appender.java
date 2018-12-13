@@ -7,6 +7,10 @@ import org.slf4j.LoggerFactory;
 import java.net.*;
 import java.util.*;
 
+/**
+ * Simple Appender class that sets up fluentd sink with the
+ * defaults used by logsense.com service.
+ */
 public class Appender<E> extends FluencyLogbackAppender<E> {
     final Logger logger = LoggerFactory.getLogger(Appender.class);
 
@@ -15,6 +19,10 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
     private final static String FIELD_CS_SOURCE_IP = "cs_src_ip";
     private final static String FIELD_SOURCE_NAME = "source_name";
 
+    /**
+     * Utility class that does it best to figure out what is the machine IP address.
+     * It prefers non-local addresses over the local ones (or loopback)
+     */
     public static class AddressDeterminer {
         private List<InetAddress> preferredAddresses = new ArrayList<>();
 
@@ -54,7 +62,6 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
                 return preferredAddresses.get(0);
             }
         }
-
 
         private void sortAddresses() {
             Collections.sort(preferredAddresses, new Comparator<InetAddress>() {
@@ -123,6 +130,10 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         setCsPatternKey("message");
     }
 
+    /**
+     * @param useLocalIpAddress if set to true, figures out what is the local IP address and sends it
+     *                          with the logs
+     */
     public void setUseLocalIpAddress(boolean useLocalIpAddress) {
         this.sendLocalIpAddress = useLocalIpAddress;
 
@@ -140,6 +151,9 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         return sendLocalIpAddress;
     }
 
+    /**
+     * @param csCustomerToken the CUSTOMER_TOKEN which identifies each client when sending data to logsense.com
+     */
     public void setCsCustomerToken(String csCustomerToken) {
         this.additionalFields.put(FIELD_CS_CUSTOMER_TOKEN, csCustomerToken);
     }
@@ -148,6 +162,10 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         return this.additionalFields.get(FIELD_CS_CUSTOMER_TOKEN);
     }
 
+    /**
+     * @param csPatternKey name of the key which is a subject of automated pattern recognition. By default set to
+     *                     `message`
+     */
     public void setCsPatternKey(String csPatternKey) {
         this.additionalFields.put(FIELD_CS_PATTERN_KEY, csPatternKey);
     }
@@ -156,6 +174,9 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         return this.additionalFields.get(FIELD_CS_PATTERN_KEY);
     }
 
+    /**
+     * @param csSourceIp if set, overwrites the source IP with the string. Please use only valid IP addresses
+     */
     public void setCsSourceIp(String csSourceIp) {
         this.additionalFields.put(FIELD_CS_SOURCE_IP, csSourceIp);
     }
@@ -164,6 +185,9 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         return this.additionalFields.get(FIELD_CS_SOURCE_IP);
     }
 
+    /**
+     * @param csSourceName sets the `source_name` property. Useful when identifying where the log came from.
+     */
     public void setSourceName(String csSourceName) {
         this.additionalFields.put(FIELD_SOURCE_NAME, csSourceName);
     }
