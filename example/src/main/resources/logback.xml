@@ -4,7 +4,7 @@
 
     <!-- LogSense appender. Use the correct accessToken value, as provided by the LogSense app -->
     <appender name="LOGSENSE" class="com.logsense.logback.Appender" >
-        <csCustomerToken>enter token</csCustomerToken>
+        <csCustomerToken>CUSTOMER_TOKEN</csCustomerToken>
 
         <useLocalIpAddress>true</useLocalIpAddress>
         <sourceName>example</sourceName>
