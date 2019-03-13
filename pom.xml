@@ -5,7 +5,7 @@
 
   <groupId>com.logsense</groupId>
   <artifactId>logback-logsense</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
   <packaging>jar</packaging>
 
   <name>logback-logsense</name>
@@ -32,7 +32,7 @@
     <connection>scm:git:git://git@github.com/collectivesense/logback-logsense.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/collectivesense/logback-logsense.git</developerConnection>
     <url>http://github.com/collectivesense/logback-logsense/tree/master</url>
-    <tag>logback-logsense-1.1.0</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <distributionManagement>
@@ -56,17 +56,34 @@
     <dependency>
       <groupId>com.sndyuk</groupId>
       <artifactId>logback-more-appenders</artifactId>
-      <version>1.5.0</version>
+      <version>1.5.5</version>
     </dependency>
     <dependency>
       <groupId>org.komamitsu</groupId>
-      <artifactId>fluency</artifactId>
-      <version>1.8.1</version>
+      <artifactId>fluency-core</artifactId>
+      <version>2.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.komamitsu</groupId>
+      <artifactId>fluency-fluentd</artifactId>
+      <version>2.2.1</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>1.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.logsense</groupId>
+      <artifactId>logsense-opentracing</artifactId>
+      <version>1.1.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-util</artifactId>
+      <version>0.32.0</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 
@@ -140,31 +157,31 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-gpg-plugin</artifactId>
-        <version>1.5</version>
-        <executions>
-          <execution>
-            <id>sign-artifacts</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>sign</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.sonatype.plugins</groupId>
-        <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.7</version>
-        <extensions>true</extensions>
-        <configuration>
-          <serverId>ossrh</serverId>
-          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-          <autoReleaseAfterClose>true</autoReleaseAfterClose>
-        </configuration>
-      </plugin>
+<!--      <plugin>-->
+<!--        <groupId>org.apache.maven.plugins</groupId>-->
+<!--        <artifactId>maven-gpg-plugin</artifactId>-->
+<!--        <version>1.5</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>sign-artifacts</id>-->
+<!--            <phase>verify</phase>-->
+<!--            <goals>-->
+<!--              <goal>sign</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
+<!--      <plugin>-->
+<!--        <groupId>org.sonatype.plugins</groupId>-->
+<!--        <artifactId>nexus-staging-maven-plugin</artifactId>-->
+<!--        <version>1.6.7</version>-->
+<!--        <extensions>true</extensions>-->
+<!--        <configuration>-->
+<!--          <serverId>ossrh</serverId>-->
+<!--          <nexusUrl>https://oss.sonatype.org/</nexusUrl>-->
+<!--          <autoReleaseAfterClose>true</autoReleaseAfterClose>-->
+<!--        </configuration>-->
+<!--      </plugin>-->
     </plugins>
   </build>
 

@@ -1,6 +1,10 @@
 package com.logsense.logback;
 
 import ch.qos.logback.more.appenders.FluencyLogbackAppender;
+import com.logsense.opentracing.ISampler;
+import com.logsense.opentracing.ITraceExtractor;
+import com.logsense.opentracing.SamplerBuilder;
+import com.logsense.opentracing.TraceExtractorBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +25,11 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
     private final static String FIELD_CS_SOURCE_IP = "cs_src_ip";
     private final static String FIELD_SOURCE_NAME = "source_name";
 
+    private final static String FIELD_TRACE_ID = "ot.trace_id";
+    private final static String FIELD_SPAN_ID = "ot.span_id";
+
+    private final static String FIELD_TYPE = "_type";
+    private final static String VALUE_TYPE = "java";
 
     private final static String PROPERTY_LOGSENSE_TOKEN = "logsense.token";
     private final static String PROPERTY_LOGSENSE_CONFIG = "logsense.config";
@@ -30,6 +39,8 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
     private boolean enabled = false;
     private boolean sendLocalIpAddress;
 
+    private ITraceExtractor traceExtractor;
+    private ISampler sampler;
 
     /**
      * Utility class that does it best to figure out what is the machine IP address.
@@ -141,6 +152,10 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
 
         setPropertiesFromEnv();
         setPatternKey("message");
+        this.additionalFields.put(FIELD_TYPE, VALUE_TYPE);
+
+        this.traceExtractor = new TraceExtractorBuilder().build();
+        this.sampler = new SamplerBuilder().build();
     }
 
     @Override
@@ -161,7 +176,39 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
             return;
         }
 
+        if (this.sampler.isSampledOut()) {
+            return;
+        }
+
+        setSpanContext();
         super.append(event);
+        cleanSpanContext();
+    }
+
+    private void setSpanContext() {
+        if (this.traceExtractor == null) {
+            return;
+        }
+
+        String traceId = this.traceExtractor.extractTraceId();
+        String spanId = this.traceExtractor.extractSpanId();
+
+        if (traceId != null) {
+            this.additionalFields.put(FIELD_TRACE_ID, traceId);
+        }
+
+        if (spanId != null) {
+            this.additionalFields.put(FIELD_SPAN_ID, spanId);
+        }
+    }
+
+    private void cleanSpanContext() {
+        if (this.traceExtractor == null) {
+            return;
+        }
+
+        this.additionalFields.remove(FIELD_TRACE_ID);
+        this.additionalFields.remove(FIELD_SPAN_ID);
     }
 
     private void setPropertiesFromEnv() {
