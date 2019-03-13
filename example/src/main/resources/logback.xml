@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE logback>
 <configuration>
-
     <!-- LogSense appender. Use the correct accessToken value, as provided by the LogSense app -->
     <appender name="LOGSENSE" class="com.logsense.logback.Appender" >
+        <!-- You can also provide it as an environment variable,
+             e.g. LOGSENSE_TOKEN=<your token> or JVM parameter -Dlogsense.token=<your token> -->
         <logsenseToken>ENTER_LOGSENSE_TOKEN</logsenseToken>
 
         <useLocalIpAddress>true</useLocalIpAddress>
@@ -21,5 +21,4 @@
         <appender-ref ref="STDOUT" />
         <appender-ref ref="LOGSENSE" />
     </root>
-
 </configuration>
