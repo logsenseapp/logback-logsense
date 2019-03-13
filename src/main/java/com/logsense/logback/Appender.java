@@ -4,6 +4,8 @@ import ch.qos.logback.more.appenders.FluencyLogbackAppender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.net.*;
 import java.util.*;
 
@@ -18,6 +20,16 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
     private final static String FIELD_CS_PATTERN_KEY = "cs_pattern_key";
     private final static String FIELD_CS_SOURCE_IP = "cs_src_ip";
     private final static String FIELD_SOURCE_NAME = "source_name";
+
+
+    private final static String PROPERTY_LOGSENSE_TOKEN = "logsense.token";
+    private final static String PROPERTY_LOGSENSE_CONFIG = "logsense.config";
+    private final static String ENV_LOGSENSE_TOKEN = "LOGSENSE_TOKEN";
+
+    // Guards for a case when no or invalid token is set
+    private boolean enabled = false;
+    private boolean sendLocalIpAddress;
+
 
     /**
      * Utility class that does it best to figure out what is the machine IP address.
@@ -127,7 +139,56 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
             additionalFields = new HashMap<String, String>();
         }
 
-        setCsPatternKey("message");
+        setPropertiesFromEnv();
+        setPatternKey("message");
+    }
+
+    @Override
+    public void start() {
+        // Start nevertheless, the token could be provided in runtime later
+        super.start();
+
+        if (enabled == false) {
+            logger.warn("LogSense appender has no LOGSENSE_TOKEN set. Sending logs will be skipped unless the token is provided");
+        } else {
+            logger.trace("Starting LogSense appender");
+        }
+    }
+
+    @Override
+    protected void append(E event) {
+        if (enabled == false) {
+            return;
+        }
+
+        super.append(event);
+    }
+
+    private void setPropertiesFromEnv() {
+        // Step 1 - try to fetch it from property
+        String token_maybe = System.getProperties().getProperty(PROPERTY_LOGSENSE_TOKEN);
+
+        // Step 2 - not present? use env variable
+        if (!isValidLogsenseToken(token_maybe)) {
+            token_maybe = System.getenv(ENV_LOGSENSE_TOKEN);
+        }
+
+        // Step 3 - not present? maybe config file was specified?
+        if (!isValidLogsenseToken(token_maybe)) {
+            String config_file = System.getProperties().getProperty(PROPERTY_LOGSENSE_CONFIG);
+            if (config_file != null && !config_file.isEmpty()) {
+                Properties prop = attemptLoadingPropertyFile(config_file);
+                try {
+                    token_maybe = prop.getProperty(PROPERTY_LOGSENSE_TOKEN);
+                } catch (NullPointerException npe) {
+                    // Just skip it silently
+                }
+            }
+        }
+
+        if (isValidLogsenseToken(token_maybe)) {
+            setLogsenseToken(token_maybe);
+        }
     }
 
     /**
@@ -141,7 +202,7 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         if (this.sendLocalIpAddress) {
             InetAddress addr = new AddressDeterminer().getPreferredAddress();
             if (addr != null) {
-                setCsSourceIp(addr.getHostAddress());
+                setSourceIp(addr.getHostAddress());
                 logger.info("Using {} as the source IP address", addr.getHostAddress());
             }
         }
@@ -151,38 +212,103 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         return sendLocalIpAddress;
     }
 
-    /**
-     * @param csCustomerToken the CUSTOMER_TOKEN which identifies each client when sending data to logsense.com
-     */
-    public void setCsCustomerToken(String csCustomerToken) {
-        this.additionalFields.put(FIELD_CS_CUSTOMER_TOKEN, csCustomerToken);
+    private boolean isValidLogsenseToken(String potentialLogsenseToken) {
+        if (potentialLogsenseToken == null || potentialLogsenseToken.trim().isEmpty() || potentialLogsenseToken.trim().equals("ENTER_LOGSENSE_TOKEN")) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
-    public String getCsCustomerToken() {
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * @param logsenseToken the LOGSENSE_TOKEN which identifies each client when sending data to logsense.com
+     */
+    public void setLogsenseToken(String logsenseToken) {
+        if (isValidLogsenseToken(logsenseToken)) {
+            this.additionalFields.put(FIELD_CS_CUSTOMER_TOKEN, logsenseToken);
+        }
+
+        if (isValidLogsenseToken(getLogsenseToken())) {
+            this.enabled = true;
+        } else {
+            this.enabled = false;
+        }
+    }
+
+    public String getLogsenseToken() {
         return this.additionalFields.get(FIELD_CS_CUSTOMER_TOKEN);
+    }
+
+    /**
+     * @param patternKey name of the key which is a subject of automated pattern recognition. By default set to
+     *                  `message`
+     */
+    public void setPatternKey(String patternKey) {
+        this.additionalFields.put(FIELD_CS_PATTERN_KEY, patternKey);
+    }
+
+    public String getPatternKey() {
+        return this.additionalFields.get(FIELD_CS_PATTERN_KEY);
+    }
+
+    /**
+     * @param sourceIp if set, overwrites the source IP with the string. Please use only valid IP addresses
+     */
+    public void setSourceIp(String sourceIp) {
+        this.additionalFields.put(FIELD_CS_SOURCE_IP, sourceIp);
+    }
+
+    public String getSourceIp() {
+        return this.additionalFields.get(FIELD_CS_SOURCE_IP);
+    }
+
+    /**
+     * @param csCustomerToken the CUSTOMER_TOKEN which identifies each client when sending data to logsense.com
+     * @deprecated use {@link #setLogsenseToken(String)}
+     */
+    public void setCsCustomerToken(String csCustomerToken) {
+        this.setLogsenseToken(csCustomerToken);
+    }
+
+    /**
+     * @return the set token
+     * @deprecated use {@link #getLogsenseToken()}
+     */
+    public String getCsCustomerToken() {
+        return this.getLogsenseToken();
     }
 
     /**
      * @param csPatternKey name of the key which is a subject of automated pattern recognition. By default set to
      *                     `message`
+     * @deprecated use {@link #setPatternKey(String)}
      */
     public void setCsPatternKey(String csPatternKey) {
-        this.additionalFields.put(FIELD_CS_PATTERN_KEY, csPatternKey);
+        this.setPatternKey(csPatternKey);
     }
 
     public String getCsPatternKey() {
-        return this.additionalFields.get(FIELD_CS_PATTERN_KEY);
+        return this.getPatternKey();
     }
 
     /**
      * @param csSourceIp if set, overwrites the source IP with the string. Please use only valid IP addresses
+     * @deprecated use {@link #setSourceIp(String)}
      */
     public void setCsSourceIp(String csSourceIp) {
-        this.additionalFields.put(FIELD_CS_SOURCE_IP, csSourceIp);
+        this.setSourceIp(csSourceIp);
     }
 
     public String getCsSourceIp() {
-        return this.additionalFields.get(FIELD_CS_SOURCE_IP);
+        return this.getSourceIp();
     }
 
     /**
@@ -196,6 +322,23 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         return this.additionalFields.get(FIELD_SOURCE_NAME);
     }
 
-    private boolean sendLocalIpAddress;
+    private Properties attemptLoadingPropertyFile(String path) {
+        Properties prop = new Properties();
+        InputStream fis=null;
+        try {
+            fis = new FileInputStream(path);
+            prop.load(fis);
+        } catch(Exception e) {
+            logger.warn(String.format("Skipping loading LogSense properties from %s due to exception: %s", path, e.getMessage(), e));
+        } finally {
+            try {
+                fis.close();;
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        return prop;
+    }
 }
 
