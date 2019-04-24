@@ -15,6 +15,11 @@ public class Wombat {
     }
 
     private void tempSanitizer(int temp) {
+        
+        
+        logger.info("...");
+        
+        
         throwIfBelowAbsoluteZero(temp);
     }
 
