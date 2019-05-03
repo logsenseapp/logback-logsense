@@ -1,35 +1,49 @@
 package com.logsense.logback;
 
 import ch.qos.logback.more.appenders.FluencyLogbackAppender;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.logsense.opentracing.ISampler;
+import com.logsense.opentracing.ITraceExtractor;
+import com.logsense.opentracing.SamplerBuilder;
+import com.logsense.opentracing.TraceExtractorBuilder;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * Simple Appender class that sets up fluentd sink with the
  * defaults used by logsense.com service.
  */
 public class Appender<E> extends FluencyLogbackAppender<E> {
-    final Logger logger = LoggerFactory.getLogger(Appender.class);
+    private static final Logger logger = Logger.getLogger(Appender.class.getName());
 
     private final static String FIELD_CS_CUSTOMER_TOKEN = "cs_customer_token";
     private final static String FIELD_CS_PATTERN_KEY = "cs_pattern_key";
     private final static String FIELD_CS_SOURCE_IP = "cs_src_ip";
     private final static String FIELD_SOURCE_NAME = "source_name";
 
+    private final static String FIELD_TRACE_ID = "ot.trace_id";
+    private final static String FIELD_SPAN_ID = "ot.span_id";
+
+    private final static String FIELD_TYPE = "_type";
+    private final static String VALUE_TYPE = "java";
 
     private final static String PROPERTY_LOGSENSE_TOKEN = "logsense.token";
     private final static String PROPERTY_LOGSENSE_CONFIG = "logsense.config";
     private final static String ENV_LOGSENSE_TOKEN = "LOGSENSE_TOKEN";
 
+    private final static String[] FIELDS_SKIPPED = new String[] {
+            "msg" // essentially a duplicate of message
+    };
+
     // Guards for a case when no or invalid token is set
     private boolean enabled = false;
     private boolean sendLocalIpAddress;
 
+    private ITraceExtractor traceExtractor;
+    private ISampler sampler;
 
     /**
      * Utility class that does it best to figure out what is the machine IP address.
@@ -141,6 +155,14 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
 
         setPropertiesFromEnv();
         setPatternKey("message");
+        this.additionalFields.put(FIELD_TYPE, VALUE_TYPE);
+
+        for (String ignoredField : FIELDS_SKIPPED) {
+            this.additionalFields.put(ignoredField, null);
+        }
+
+        this.traceExtractor = new TraceExtractorBuilder().build();
+        this.sampler = new SamplerBuilder().build();
     }
 
     @Override
@@ -149,9 +171,9 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         super.start();
 
         if (enabled == false) {
-            logger.warn("LogSense appender has no LOGSENSE_TOKEN set. Sending logs will be skipped unless the token is provided");
+            logger.severe("LogSense appender has no LOGSENSE_TOKEN set. Sending logs will be skipped unless the token is provided");
         } else {
-            logger.trace("Starting LogSense appender");
+            logger.fine("Starting LogSense appender");
         }
     }
 
@@ -161,7 +183,39 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
             return;
         }
 
+        if (this.sampler.isSampledOut()) {
+            return;
+        }
+
+        setSpanContext();
         super.append(event);
+        cleanSpanContext();
+    }
+
+    private void setSpanContext() {
+        if (this.traceExtractor == null) {
+            return;
+        }
+
+        String traceId = this.traceExtractor.extractTraceId();
+        String spanId = this.traceExtractor.extractSpanId();
+
+        if (traceId != null) {
+            this.additionalFields.put(FIELD_TRACE_ID, traceId);
+        }
+
+        if (spanId != null) {
+            this.additionalFields.put(FIELD_SPAN_ID, spanId);
+        }
+    }
+
+    private void cleanSpanContext() {
+        if (this.traceExtractor == null) {
+            return;
+        }
+
+        this.additionalFields.remove(FIELD_TRACE_ID);
+        this.additionalFields.remove(FIELD_SPAN_ID);
     }
 
     private void setPropertiesFromEnv() {
@@ -203,7 +257,7 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
             InetAddress addr = new AddressDeterminer().getPreferredAddress();
             if (addr != null) {
                 setSourceIp(addr.getHostAddress());
-                logger.info("Using {} as the source IP address", addr.getHostAddress());
+                logger.info("Using " + addr.getHostAddress() + " as the source IP address");
             }
         }
     }
@@ -329,7 +383,7 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
             fis = new FileInputStream(path);
             prop.load(fis);
         } catch(Exception e) {
-            logger.warn(String.format("Skipping loading LogSense properties from %s due to exception: %s", path, e.getMessage(), e));
+            logger.severe(String.format("Skipping loading LogSense properties from %s due to exception: %s", path, e.getMessage(), e));
         } finally {
             try {
                 fis.close();;
