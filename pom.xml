@@ -32,7 +32,7 @@
     <connection>scm:git:git://git@github.com/collectivesense/logback-logsense.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/collectivesense/logback-logsense.git</developerConnection>
     <url>http://github.com/collectivesense/logback-logsense/tree/master</url>
-    <tag>HEAD</tag>
+    <tag>logback-logsense-1.1.1</tag>
   </scm>
 
   <distributionManagement>
