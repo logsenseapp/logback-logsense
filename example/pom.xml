@@ -6,7 +6,7 @@
 
     <artifactId>example</artifactId>
     <groupId>com.logsense</groupId>
-    <version>1.1.1</version>
+    <version>1.1.2</version>
 
     <name>LogSense usage example</name>
     <url>http://www.logsense.com</url>
@@ -21,7 +21,7 @@
         <dependency>
             <groupId>com.logsense</groupId>
             <artifactId>logback-logsense</artifactId>
-            <version>1.1.1</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

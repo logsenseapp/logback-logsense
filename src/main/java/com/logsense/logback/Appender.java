@@ -1,10 +1,15 @@
 package com.logsense.logback;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.more.appenders.FluencyLogbackAppender;
 import com.logsense.opentracing.ISampler;
 import com.logsense.opentracing.ITraceExtractor;
 import com.logsense.opentracing.SamplerBuilder;
 import com.logsense.opentracing.TraceExtractorBuilder;
+import org.slf4j.LoggerFactory;
+import org.slf4j.helpers.SubstituteLogger;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -41,6 +46,7 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
     // Guards for a case when no or invalid token is set
     private boolean enabled = false;
     private boolean sendLocalIpAddress;
+    private boolean silenceFluencyWarnings = true;
 
     private ITraceExtractor traceExtractor;
     private ISampler sampler;
@@ -181,6 +187,13 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
     protected void append(E event) {
         if (enabled == false) {
             return;
+        }
+
+        if (this.silenceFluencyWarnings && event instanceof ILoggingEvent) {
+            ILoggingEvent loggingEvent = (ILoggingEvent) event;
+            if (loggingEvent.getLoggerName().startsWith("org.komamitsu.fluency")) {
+                return;
+            }
         }
 
         if (this.sampler.isSampledOut()) {
@@ -393,6 +406,17 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         }
 
         return prop;
+    }
+
+    /**
+     * @param silenceFluencyWarnings - if set to true (default), Fluency WARNING logs are being silenced.
+     */
+    public void setSilenceFluencyWarnings(boolean silenceFluencyWarnings) {
+        this.silenceFluencyWarnings = silenceFluencyWarnings;
+    }
+
+    public boolean isSilenceFluencyWarnings() {
+        return silenceFluencyWarnings;
     }
 }
 
