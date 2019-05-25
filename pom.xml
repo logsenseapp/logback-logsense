@@ -5,7 +5,7 @@
 
   <groupId>com.logsense</groupId>
   <artifactId>logback-logsense</artifactId>
-  <version>1.1.3</version>
+  <version>1.1.4-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>logback-logsense</name>
@@ -32,7 +32,7 @@
     <connection>scm:git:git://git@github.com/collectivesense/logback-logsense.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/collectivesense/logback-logsense.git</developerConnection>
     <url>http://github.com/collectivesense/logback-logsense/tree/master</url>
-    <tag>v1.1.3</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <distributionManagement>
