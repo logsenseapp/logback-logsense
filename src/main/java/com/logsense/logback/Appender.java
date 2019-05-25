@@ -4,10 +4,12 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.more.appenders.FluencyLogbackAppender;
+import com.logsense.fluency.LogSenseFluencyBuilder;
 import com.logsense.opentracing.ISampler;
 import com.logsense.opentracing.ITraceExtractor;
 import com.logsense.opentracing.SamplerBuilder;
 import com.logsense.opentracing.TraceExtractorBuilder;
+import org.komamitsu.fluency.fluentd.FluencyBuilderForFluentd;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.SubstituteLogger;
 
@@ -171,6 +173,25 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
         this.sampler = new SamplerBuilder().build();
     }
 
+    protected FluencyBuilderForFluentd configureFluency() {
+        if (this.silenceFluencyWarnings) {
+            LogSenseFluencyBuilder builder = new LogSenseFluencyBuilder();
+            builder.setAckResponseMode(isAckResponseMode());
+            if (getFileBackupDir() != null) { builder.setFileBackupDir(getFileBackupDir()); }
+            if (getBufferChunkInitialSize() != null) { builder.setBufferChunkInitialSize(getBufferChunkInitialSize()); }
+            if (getBufferChunkRetentionSize() != null) { builder.setBufferChunkRetentionSize(getBufferChunkRetentionSize()); }
+            if (getMaxBufferSize() != null) { builder.setMaxBufferSize(getMaxBufferSize()); }
+            if (getWaitUntilBufferFlushed() != null) { builder.setWaitUntilBufferFlushed(getWaitUntilBufferFlushed()); }
+            if (getWaitUntilFlusherTerminated() != null) { builder.setWaitUntilFlusherTerminated(getWaitUntilFlusherTerminated()); }
+            if (getFlushIntervalMillis() != null) { builder.setFlushIntervalMillis(getFlushIntervalMillis()); }
+            if (getSenderMaxRetryCount() != null) { builder.setSenderMaxRetryCount(getSenderMaxRetryCount()); }
+
+            return builder;
+        } else {
+            return super.configureFluency();
+        }
+    }
+
     @Override
     public void start() {
         // Start nevertheless, the token could be provided in runtime later
@@ -187,13 +208,6 @@ public class Appender<E> extends FluencyLogbackAppender<E> {
     protected void append(E event) {
         if (enabled == false) {
             return;
-        }
-
-        if (this.silenceFluencyWarnings && event instanceof ILoggingEvent) {
-            ILoggingEvent loggingEvent = (ILoggingEvent) event;
-            if (loggingEvent.getLoggerName().startsWith("org.komamitsu.fluency")) {
-                return;
-            }
         }
 
         if (this.sampler.isSampledOut()) {
