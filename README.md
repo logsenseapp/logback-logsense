@@ -16,7 +16,7 @@ The project includes a simple Logback appender that pushes data to LogSense usin
 <dependency>
   <groupId>com.logsense</groupId>
   <artifactId>logback-logsense</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.5</version>
 </dependency>
 ```
   
